@@ -119,8 +119,22 @@ export function createAuthFetch<B, M>(
         }
 
         let authenticateHeaders: string | string[] | null = initialResponse.headers.get('www-authenticate');
-        if (!authenticateHeaders)
+        if (!authenticateHeaders) {
+            // Some devices (e.g. Hikvision firmware V3.7.0+) return HTTP 401 without a
+            // WWW-Authenticate challenge header on certain endpoints such as
+            // /ISAPI/Event/notification/alertStream and /ISAPI/System/TwoWayAudio/channels.
+            // In this case, fall back to HTTP Basic Auth so the request can still succeed.
+            if (options.credential) {
+                const { BASIC, buildAuthorizationHeader } = await import('http-auth-utils');
+                const basicHeader = buildAuthorizationHeader(BASIC, {
+                    username: options.credential.username,
+                    password: options.credential.password,
+                });
+                setHeader(headers, 'Authorization', basicHeader);
+                return h(options);
+            }
             throw new Error('Did not find WWW-Authenticate header.');
+        }
 
 
         if (typeof authenticateHeaders === 'string')

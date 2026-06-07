@@ -36,8 +36,12 @@ export class OnvifIntercom implements Intercom {
         this.camera.console.log(describe.body?.toString());
         const parsedSdp = parseSdp(describe.body.toString());
         const audioBackchannel = parsedSdp.msections.find(msection => msection.type === 'audio' && msection.direction === 'sendonly');
-        if (!audioBackchannel)
+        if (!audioBackchannel) {
+            // Tear down cleanly so the connection is not left open and does not
+            // interfere with subsequent startIntercom() calls.
+            await intercomClient.safeTeardown().catch(() => { });
             throw new Error('ONVIF audio backchannel not found');
+        }
 
         return { audioBackchannel, intercomClient };
     }

@@ -718,7 +718,10 @@ export class HikvisionCamera extends RtspSmartCamera implements Camera, Intercom
             }
         }
         catch (e) {
-            this.console.error('Failure while determining two way audio codec', e);
+            // Non-fatal: some Hikvision firmware versions (e.g. V3.7.0+ on door stations)
+            // may fail to return codec info via ISAPI HTTP. Intercom will continue using
+            // the pcm_mulaw fallback codec below which is the correct default for these devices.
+            this.console.warn('Could not determine two way audio codec via ISAPI, using fallback pcm_mulaw.', e?.message || e);
         }
 
         if (codec === 'G.711ulaw') {
