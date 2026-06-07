@@ -277,7 +277,14 @@ export class HikvisionCameraAPI implements HikvisionAPI {
                     .catch(() => stream.destroy());
                 return events as any as Destroyable;
             });
-            this.listenerPromise.catch(() => this.listenerPromise = undefined);
+            this.listenerPromise.catch(e => {
+            // A failure in the HTTP alertStream listener (e.g. missing WWW-Authenticate on
+            // Hikvision V3.7.0+ firmware) must NOT propagate outside this class.
+            // The listen loop is non-fatal — motion events may be unavailable but the
+            // RTSP stream and Two Way Audio (intercom) session should continue unaffected.
+            this.console.warn('listen loop connection failed, restarting listener.', e?.message || e);
+            this.listenerPromise = undefined;
+        });
         }
 
         return this.listenerPromise;
